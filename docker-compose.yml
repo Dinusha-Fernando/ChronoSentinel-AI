@@ -1,0 +1,148 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: domain_risk
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Dinusha07postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d domain_risk" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:Dinusha07postgres@db:5432/domain_risk
+      - SYNC_DATABASE_URL=postgresql://postgres:Dinusha07postgres@db:5432/domain_risk
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTP_PROXY_LIST=${HTTP_PROXY_LIST:-}
+      - MOCK_WAYBACK=${MOCK_WAYBACK:-False}
+      - ENABLE_PROXY_SCRAPER=${ENABLE_PROXY_SCRAPER:-True}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://wayback.200m.website,http://wayback.200m.website,http://localhost:5173,*}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-changeme-replace-with-openssl-rand-hex-32}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
+      - ACCOUNT_LOCK_MINUTES=${ACCOUNT_LOCK_MINUTES:-15}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-noreply@chronosentinel.ai}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A backend.app.workers.celery_worker.celery_app worker --loglevel=info --concurrency=8
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:Dinusha07postgres@db:5432/domain_risk
+      - SYNC_DATABASE_URL=postgresql://postgres:Dinusha07postgres@db:5432/domain_risk
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTP_PROXY_LIST=${HTTP_PROXY_LIST:-}
+      - MOCK_WAYBACK=${MOCK_WAYBACK:-False}
+      - ENABLE_PROXY_SCRAPER=${ENABLE_PROXY_SCRAPER:-True}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A backend.app.workers.celery_worker.celery_app beat --loglevel=info
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:Dinusha07postgres@db:5432/domain_risk
+      - SYNC_DATABASE_URL=postgresql://postgres:Dinusha07postgres@db:5432/domain_risk
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTP_PROXY_LIST=${HTTP_PROXY_LIST:-}
+      - MOCK_WAYBACK=${MOCK_WAYBACK:-False}
+      - ENABLE_PROXY_SCRAPER=${ENABLE_PROXY_SCRAPER:-True}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked into the JS bundle at build time — browser calls this URL directly
+        VITE_API_URL: /api/v1
+    ports:
+      - "3001:80"
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: chronosentinel-ai_postgres_data
+    external: true
+
+  redis_data:
+    name: chronosentinel-ai_redis_data
+    external: true

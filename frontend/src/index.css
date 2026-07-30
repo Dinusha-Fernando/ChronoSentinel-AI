@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* ─── Custom theme tokens ─────────────────────────────────────── */
+:root {
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --color-brand-50:  hsl(263 100% 97%);
+  --color-brand-100: hsl(263 93% 94%);
+  --color-brand-200: hsl(263 88% 87%);
+  --color-brand-300: hsl(263 84% 77%);
+  --color-brand-400: hsl(263 79% 65%);
+  --color-brand-500: hsl(263 75% 59%);
+  --color-brand-600: hsl(263 71% 47%);
+  --color-brand-700: hsl(263 71% 41%);
+  --color-brand-800: hsl(263 68% 35%);
+  --color-brand-900: hsl(263 63% 28%);
+  --color-brand-950: hsl(263 62% 14%);
+}
+
+/* ─── Global base styles ──────────────────────────────────────── */
+@layer base {
+  body {
+    background-color: #030712;
+    color: #f3f4f6;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Radial blob backgrounds */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.13) 0%, transparent 45%),
+      radial-gradient(circle at 85% 75%, rgba(59, 130, 246, 0.13) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* Subtle moving cyber-grid overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(rgba(139, 92, 246, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139, 92, 246, 0.035) 1px, transparent 1px);
+    background-size: 50px 50px;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 40%, transparent 85%);
+    mask-image: radial-gradient(ellipse at 50% 50%, black 40%, transparent 85%);
+    pointer-events: none;
+    animation: diag-pan 35s linear infinite;
+  }
+
+  @keyframes diag-pan {
+    0% {
+      background-position: 0px 0px;
+    }
+    100% {
+      background-position: 50px 50px;
+    }
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: rgba(15, 23, 42, 0.2); }
+  ::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.4); }
+}
+
+/* ─── Reusable component classes ──────────────────────────────── */
+@layer components {
+  .glass-panel {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    border-radius: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-panel-hover:hover {
+    background: rgba(15, 23, 42, 0.55);
+    border-color: rgba(139, 92, 246, 0.2);
+    box-shadow: 0 12px 40px 0 rgba(139, 92, 246, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .glass-input {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #f3f4f6;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .glass-input:focus {
+    outline: none;
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25), inset 0 0 0 1px rgba(139, 92, 246, 0.2);
+    background: rgba(15, 23, 42, 0.85);
+  }
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50%       { opacity: 0.4;  transform: scale(1.05); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s infinite ease-in-out;
+}
+
+/* SVG gauge progress ring */
+.progress-ring__circle {
+  transition: stroke-dashoffset 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
